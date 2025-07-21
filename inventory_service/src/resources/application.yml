@@ -1,0 +1,93 @@
+# 服务器配置
+server:
+  port: 8081
+  # 解释: 使用8081端口，避免与订单服务(8080)冲突
+  # 微服务架构中，每个服务需要独立的端口
+
+# Spring Boot应用配置
+spring:
+  application:
+    name: inventory-service
+    # 解释: 应用名称，用于日志、监控和服务发现
+    
+  # 数据库配置
+  datasource:
+    url: jdbc:mysql://localhost:3307/microservices_db
+    username: app_user
+    password: app_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 解释: 与订单服务共享同一个数据库实例
+    # 这样两个服务可以访问同一份数据，但管理不同的表
+
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: update
+      # 解释: 自动更新表结构，会根据实体类创建库存相关表
+    show-sql: true
+      # 解释: 显示SQL语句，便于调试库存操作
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        # 解释: MySQL方言，优化SQL生成
+
+  # Kafka配置
+  kafka:
+    bootstrap-servers: localhost:9092
+    # 解释: Kafka服务器地址，与订单服务相同
+    
+    consumer:
+      group-id: inventory-service-group
+      # 解释: 消费者组ID，确保同一条消息只被处理一次
+      # 不同的消费者组ID意味着不同的服务
+      
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      # 解释: 反序列化器，将Kafka中的字节数组转换为Java对象
+      
+      properties:
+        spring.json.trusted.packages: "*"
+        # 解释: 允许反序列化所有包的类，简化开发
+        # 生产环境中应该限制为特定包
+        
+      auto-offset-reset: earliest
+      # 解释: 当没有初始偏移量时，从最早的消息开始读取
+      # 确保不会遗漏任何订单事件
+      
+      enable-auto-commit: false
+      # 解释: 禁用自动提交偏移量，使用手动提交确保消息处理成功
+      # 防止消息丢失和重复处理
+
+# 日志配置
+logging:
+  level:
+    com.example.inventoryservice: DEBUG
+    # 解释: 库存服务的详细日志，便于调试
+    
+    org.springframework.kafka: INFO
+    # 解释: Kafka相关日志，减少过多的调试信息
+    
+    org.hibernate.SQL: DEBUG
+    # 解释: 显示SQL语句的详细信息
+    
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    # 解释: 显示SQL参数绑定，完整的数据库操作追踪
+
+# 应用特定配置
+inventory:
+  kafka:
+    topics:
+      order-events: order-events
+      # 解释: 订单事件主题名称，保持与订单服务一致
+    
+  processing:
+    retry:
+      max-attempts: 3
+      # 解释: 消息处理失败时的最大重试次数
+      
+      delay: 1000
+      # 解释: 重试间隔时间（毫秒）
+      
+    batch:
+      size: 10
+      # 解释: 批量处理大小，提高处理效率
