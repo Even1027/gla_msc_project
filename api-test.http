@@ -1,0 +1,106 @@
+### 🧪 完整幂等性测试流程
+### 使用修正后的请求格式
+
+### 步骤0：清理测试环境
+DELETE http://localhost:8080/api/orders/debug/clear-idempotency
+
+### 步骤1：检查Redis连接状态
+GET http://localhost:8080/api/orders/debug/redis-status
+
+### 步骤2：库存服务健康检查
+GET http://localhost:8081/api/inventory/health
+
+### 步骤3：记录初始库存状态（产品1应该是100）
+GET http://localhost:8081/api/inventory
+
+### 步骤4：查看当前幂等性键（应该为空）
+GET http://localhost:8080/api/orders/debug/idempotency-keys
+
+### 步骤5：创建第一个订单（消耗productId=1的商品，数量=3）
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+Idempotency-Key: idempotency-test-006
+
+{
+  "productId": 1,
+  "quantity": 3
+}
+
+### 步骤6：检查Redis中的幂等性键
+GET http://localhost:8080/api/orders/debug/idempotency?key=idempotency-test-006
+
+### 步骤7：等待5秒后检查库存更新（产品1应该从100减少到97）
+### 注意：请手动等待5秒再执行下一步
+GET http://localhost:8081/api/inventory
+
+### 步骤8：验证Redis幂等性（使用相同Key，不同数据，应返回相同订单）
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+Idempotency-Key: idempotency-test-006
+
+{
+  "productId": 1,
+  "quantity": 2
+}
+
+### 步骤9：再次检查库存（产品1应该仍然是97，没有再次减少）
+GET http://localhost:8081/api/inventory
+
+### 步骤10：查看所有幂等性键
+GET http://localhost:8080/api/orders/debug/idempotency-keys
+
+### 步骤11：创建新订单测试产品2（不同的Idempotency-Key）
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+Idempotency-Key: product2-success-test-001
+
+{
+  "productId": 2,
+  "quantity": 3
+}
+
+### 步骤12：检查所有产品库存最终状态
+GET http://localhost:8081/api/inventory
+
+### 步骤13：查看所有订单
+GET http://localhost:8080/api/orders
+
+### 步骤14：查看最终的幂等性键状态
+GET http://localhost:8080/api/orders/debug/idempotency-keys
+
+### 步骤15：订单服务健康检查
+GET http://localhost:8080/api/orders/health
+
+### 🔍 额外调试测试
+
+### 手动设置幂等性键测试
+POST http://localhost:8080/api/orders/debug/set-idempotency?key=manual-test&value=ORDER_TEST_123
+
+### 验证手动设置的键
+GET http://localhost:8080/api/orders/debug/idempotency?key=manual-test
+
+### 测试简化接口（无幂等性控制）
+GET http://localhost:8080/api/orders/simple?productId=3&quantity=1
+
+### 并发测试：快速连续发送相同请求
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+Idempotency-Key: concurrent-test-001
+
+{
+  "productId": 1,
+  "quantity": 1
+}
+
+###
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+Idempotency-Key: concurrent-test-001
+
+{
+  "productId": 1,
+  "quantity": 1
+}
+
+### 清理测试数据
+DELETE http://localhost:8080/api/orders/debug/clear-idempotency

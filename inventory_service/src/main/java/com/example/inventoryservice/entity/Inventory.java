@@ -32,7 +32,7 @@ public class Inventory {
     // 解释: 预留数量，已下单但未确认的库存，默认为0
     
     @Version
-    private Long version;
+    private Long version = 0L;
     // 解释: 乐观锁版本号，防止并发修改冲突
     // 当多个请求同时修改库存时，确保数据一致性
     

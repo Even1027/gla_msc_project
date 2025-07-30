@@ -1,19 +1,26 @@
 package com.example.orderservice.controller;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,6 +40,9 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
     // ==================== 核心API接口 ====================
 
     /**
@@ -43,16 +53,19 @@ public class OrderController {
      * @return 创建的订单信息
      */
     @PostMapping
-    public ResponseEntity<ApiResponse<Order>> createOrder(@RequestBody CreateOrderRequest request) {
+    public ResponseEntity<ApiResponse<Order>> createOrder(
+            @RequestBody CreateOrderRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+
         logger.info("收到创建订单请求: productId={}, quantity={}, idempotencyKey={}",
-                request.getProductId(), request.getQuantity(), request.getIdempotencyKey());
+                request.getProductId(), request.getQuantity(), idempotencyKey);
 
         try {
             // 调用Service层创建订单
             Order order = orderService.createOrder(
                     request.getProductId(),
                     request.getQuantity(),
-                    request.getIdempotencyKey());
+                    idempotencyKey); // 用 header 中的 key
 
             logger.info("订单创建成功: orderId={}", order.getOrderId());
 
@@ -257,6 +270,142 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success("服务正常", "Order Service is running"));
     }
 
+    // ==================== 调试接口（用于幂等性测试） ====================
+
+    /**
+     * 检查特定幂等性键
+     * GET /api/orders/debug/idempotency?key=xxx
+     */
+    @GetMapping("/debug/idempotency")
+    public ResponseEntity<ApiResponse<String>> checkRedisIdempotency(@RequestParam String key) {
+        try {
+            String redisKey = "order:idempotency:" + key;
+            Object value = redisTemplate.opsForValue().get(redisKey);
+            Long ttl = redisTemplate.getExpire(redisKey);
+            
+            String result = value != null 
+                ? "存在 Redis 缓存，值为：" + value.toString() + "，TTL：" + ttl + "秒"
+                : "Redis 中没有找到该幂等性键";
+                
+            return ResponseEntity.ok(ApiResponse.success("查询成功", result));
+        } catch (Exception e) {
+            logger.error("查询幂等性键失败: key={}", key, e);
+            return ResponseEntity.ok(ApiResponse.error("查询失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Redis连接测试接口
+     * GET /api/orders/debug/redis-status
+     */
+    @GetMapping("/debug/redis-status")
+    public ResponseEntity<ApiResponse<String>> testRedisConnection() {
+        try {
+            // 测试Redis连接
+            String testKey = "test:connection:" + System.currentTimeMillis();
+            String testValue = "connected";
+            
+            redisTemplate.opsForValue().set(testKey, testValue, 10, TimeUnit.SECONDS);
+            Object retrievedValue = redisTemplate.opsForValue().get(testKey);
+            
+            // 清理测试键
+            redisTemplate.delete(testKey);
+            
+            if (testValue.equals(retrievedValue)) {
+                return ResponseEntity.ok(ApiResponse.success("测试完成", "Redis连接正常，读写测试成功"));
+            } else {
+                return ResponseEntity.ok(ApiResponse.error("Redis连接异常，读写测试失败"));
+            }
+        } catch (Exception e) {
+            logger.error("Redis连接测试失败", e);
+            return ResponseEntity.ok(ApiResponse.error("Redis连接失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 查看所有幂等性键
+     * GET /api/orders/debug/idempotency-keys
+     */
+    @GetMapping("/debug/idempotency-keys")
+    public ResponseEntity<ApiResponse<List<String>>> getAllIdempotencyKeys() {
+        try {
+            Set<String> keys = redisTemplate.keys("order:idempotency:*");
+            List<String> result = new ArrayList<>();
+            
+            if (keys != null && !keys.isEmpty()) {
+                for (String key : keys) {
+                    Object value = redisTemplate.opsForValue().get(key);
+                    Long ttl = redisTemplate.getExpire(key);
+                    result.add(key + " = " + value + " (TTL: " + ttl + "秒)");
+                }
+                return ResponseEntity.ok(ApiResponse.success("查询成功", result));
+            } else {
+                return ResponseEntity.ok(ApiResponse.success("查询成功", Arrays.asList("没有找到任何幂等性键")));
+            }
+        } catch (Exception e) {
+            logger.error("获取Redis键失败", e);
+            return ResponseEntity.ok(ApiResponse.error("获取Redis键失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 手动清理所有幂等性键
+     * DELETE /api/orders/debug/clear-idempotency
+     */
+    @DeleteMapping("/debug/clear-idempotency")
+    public ResponseEntity<ApiResponse<String>> clearAllIdempotencyKeys() {
+        try {
+            Set<String> keys = redisTemplate.keys("order:idempotency:*");
+            if (keys != null && !keys.isEmpty()) {
+                Long deletedCount = redisTemplate.delete(keys);
+                return ResponseEntity.ok(ApiResponse.success("清理完成", "已清理 " + deletedCount + " 个幂等性键"));
+            } else {
+                return ResponseEntity.ok(ApiResponse.success("清理完成", "没有找到需要清理的幂等性键"));
+            }
+        } catch (Exception e) {
+            logger.error("清理幂等性键失败", e);
+            return ResponseEntity.ok(ApiResponse.error("清理失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 手动设置幂等性键（用于测试）
+     * POST /api/orders/debug/set-idempotency?key=xxx&value=yyy
+     */
+    @PostMapping("/debug/set-idempotency")
+    public ResponseEntity<ApiResponse<String>> setIdempotencyKey(
+            @RequestParam String key,
+            @RequestParam String value) {
+        try {
+            String redisKey = "order:idempotency:" + key;
+            redisTemplate.opsForValue().set(redisKey, value, 30, TimeUnit.MINUTES);
+            
+            return ResponseEntity.ok(ApiResponse.success("设置成功", 
+                "已设置幂等性键: " + redisKey + " = " + value + " (TTL: 30分钟)"));
+        } catch (Exception e) {
+            logger.error("设置幂等性键失败: key={}, value={}", key, value, e);
+            return ResponseEntity.ok(ApiResponse.error("设置失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取Redis信息
+     * GET /api/orders/debug/redis-info
+     */
+    @GetMapping("/debug/redis-info")
+    public ResponseEntity<ApiResponse<String>> getRedisInfo() {
+        try {
+            // 获取Redis连接信息
+            String info = "Redis连接工厂: " + redisTemplate.getConnectionFactory().getClass().getSimpleName();
+            info += "\nRedis连接状态: " + (redisTemplate.getConnectionFactory().getConnection().ping() != null ? "正常" : "异常");
+            
+            return ResponseEntity.ok(ApiResponse.success("获取成功", info));
+        } catch (Exception e) {
+            logger.error("获取Redis信息失败", e);
+            return ResponseEntity.ok(ApiResponse.error("获取Redis信息失败: " + e.getMessage()));
+        }
+    }
+
     // ==================== 请求和响应类 ====================
 
     /**
@@ -266,6 +415,8 @@ public class OrderController {
         private Long productId;
         private Integer quantity;
         private String idempotencyKey; // 可选的幂等性键
+        private String customerId; // 客户ID（可选）
+        private Double amount; // 金额（可选）
 
         // 构造函数
         public CreateOrderRequest() {
@@ -300,6 +451,33 @@ public class OrderController {
 
         public void setIdempotencyKey(String idempotencyKey) {
             this.idempotencyKey = idempotencyKey;
+        }
+
+        public String getCustomerId() {
+            return customerId;
+        }
+
+        public void setCustomerId(String customerId) {
+            this.customerId = customerId;
+        }
+
+        public Double getAmount() {
+            return amount;
+        }
+
+        public void setAmount(Double amount) {
+            this.amount = amount;
+        }
+
+        @Override
+        public String toString() {
+            return "CreateOrderRequest{" +
+                    "productId=" + productId +
+                    ", quantity=" + quantity +
+                    ", idempotencyKey='" + idempotencyKey + '\'' +
+                    ", customerId='" + customerId + '\'' +
+                    ", amount=" + amount +
+                    '}';
         }
     }
 

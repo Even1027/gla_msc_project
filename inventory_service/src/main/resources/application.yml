@@ -37,19 +37,13 @@ spring:
     # 解释: Kafka服务器地址，与订单服务相同
     
     consumer:
-      group-id: inventory-service-group
+      group-id: inventory-service-group-v2
       # 解释: 消费者组ID，确保同一条消息只被处理一次
       # 不同的消费者组ID意味着不同的服务
       
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      # 解释: 反序列化器，将Kafka中的字节数组转换为Java对象
-      
-      properties:
-        spring.json.trusted.packages: "*"
-        # 解释: 允许反序列化所有包的类，简化开发
-        # 生产环境中应该限制为特定包
-        
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
       auto-offset-reset: earliest
       # 解释: 当没有初始偏移量时，从最早的消息开始读取
       # 确保不会遗漏任何订单事件
@@ -91,3 +85,14 @@ inventory:
     batch:
       size: 10
       # 解释: 批量处理大小，提高处理效率
+
+
+# 新增：Actuator配置  
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info
+  endpoint:
+    health:
+      show-details: always

@@ -17,19 +17,23 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.orderservice.entity.Order;
 import com.example.orderservice.entity.OrderStatus;
 import com.example.orderservice.repository.OrderRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 
 @Service
 @Transactional
 public class OrderService {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
-    
+
     // Redis键的前缀，用于幂等性控制
     private static final String IDEMPOTENCY_KEY_PREFIX = "order:idempotency:";
-    
+
     // Redis键的过期时间（分钟）
     private static final long IDEMPOTENCY_KEY_TTL = 30;
-    
+
     // Kafka主题名称
     private static final String ORDER_TOPIC = "order-events";
 
@@ -40,20 +44,21 @@ public class OrderService {
     private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     // ==================== 核心业务方法 ====================
 
     /**
      * 创建订单 - 包含完整的一致性机制
-     * @param productId 商品ID
-     * @param quantity 数量
+     * 
+     * @param productId      商品ID
+     * @param quantity       数量
      * @param idempotencyKey 幂等性键（可选）
      * @return 创建的订单
      */
     public Order createOrder(Long productId, Integer quantity, String idempotencyKey) {
-        logger.info("开始创建订单: productId={}, quantity={}, idempotencyKey={}", 
-                   productId, quantity, idempotencyKey);
+        logger.info("开始创建订单: productId={}, quantity={}, idempotencyKey={}",
+                productId, quantity, idempotencyKey);
 
         // 第一步：参数验证
         validateOrderRequest(productId, quantity);
@@ -91,8 +96,9 @@ public class OrderService {
 
     /**
      * 简化版创建订单（自动生成幂等性键）
+     * 
      * @param productId 商品ID
-     * @param quantity 数量
+     * @param quantity  数量
      * @return 创建的订单
      */
     public Order createOrder(Long productId, Integer quantity) {
@@ -103,63 +109,80 @@ public class OrderService {
 
     /**
      * 检查幂等性 - Redis缓存实现
+     * 
      * @param idempotencyKey 幂等性键
      * @return 如果存在重复请求，返回已存在的订单；否则返回null
      */
     private Order checkIdempotency(String idempotencyKey) {
         String redisKey = IDEMPOTENCY_KEY_PREFIX + idempotencyKey;
-        
+
         try {
-            // 从Redis获取缓存的订单ID
+            logger.info(">>> [DEBUG] 检查幂等性: redisKey={}", redisKey);
+
+            // 从Redis获取缓存的订单ID（改为存储订单ID而不是整个对象）
             Object cachedOrderId = redisTemplate.opsForValue().get(redisKey);
-            
+
             if (cachedOrderId != null) {
                 String orderIdStr = cachedOrderId.toString();
-                logger.debug("Redis中找到幂等性记录: idempotencyKey={}, orderId={}", 
-                           idempotencyKey, orderIdStr);
-                
+                logger.info(">>> [DEBUG] Redis中找到幂等性记录: orderId={}", orderIdStr);
+
                 // 从数据库获取完整订单信息
                 Optional<Order> orderOpt = orderRepository.findByOrderId(orderIdStr);
                 if (orderOpt.isPresent()) {
+                    logger.info(">>> [DEBUG] 数据库中找到对应订单，返回已存在订单");
                     return orderOpt.get();
                 } else {
                     // 缓存存在但数据库中没有，清理缓存
                     logger.warn("Redis缓存与数据库不一致，清理缓存: orderId={}", orderIdStr);
                     redisTemplate.delete(redisKey);
                 }
+            } else {
+                logger.info(">>> [DEBUG] Redis中未找到幂等性记录，继续创建新订单");
             }
+
         } catch (Exception e) {
             logger.error("Redis幂等性检查失败: idempotencyKey={}", idempotencyKey, e);
             // Redis失败时，降级到数据库检查
             return checkIdempotencyFallback(idempotencyKey);
         }
-        
+
         return null;
     }
 
     /**
      * 设置幂等性缓存
+     * 
      * @param idempotencyKey 幂等性键
-     * @param order 订单对象
+     * @param order          订单对象
      */
     private void setIdempotencyCache(String idempotencyKey, Order order) {
         String redisKey = IDEMPOTENCY_KEY_PREFIX + idempotencyKey;
-        
+
         try {
-            // 在Redis中缓存订单ID，设置过期时间
-            redisTemplate.opsForValue().set(redisKey, order.getOrderId(), 
-                                          IDEMPOTENCY_KEY_TTL, TimeUnit.MINUTES);
-            logger.debug("设置幂等性缓存: idempotencyKey={}, orderId={}, ttl={}分钟", 
-                        idempotencyKey, order.getOrderId(), IDEMPOTENCY_KEY_TTL);
+            logger.info(">>> [DEBUG] 准备写入Redis缓存: key={}, orderId={}", redisKey, order.getOrderId());
+
+            // 在Redis中缓存订单ID（而不是整个订单对象），设置过期时间
+            redisTemplate.opsForValue().set(redisKey, order.getOrderId(),
+                    IDEMPOTENCY_KEY_TTL, TimeUnit.MINUTES);
+
+            logger.info(">>> [DEBUG] Redis写入成功: key={}, orderId={}, ttl={}分钟",
+                    redisKey, order.getOrderId(), IDEMPOTENCY_KEY_TTL);
+
+            // 验证写入是否成功
+            Object verification = redisTemplate.opsForValue().get(redisKey);
+            logger.info(">>> [DEBUG] Redis写入验证: 读取到的值={}", verification);
+
         } catch (Exception e) {
-            logger.error("设置Redis幂等性缓存失败: idempotencyKey={}, orderId={}", 
-                        idempotencyKey, order.getOrderId(), e);
+            logger.error(">>> [ERROR] Redis写入失败: key={}, orderId={}",
+                    redisKey, order.getOrderId(), e);
+            e.printStackTrace();
             // Redis失败不影响主流程，但要记录日志
         }
     }
 
     /**
      * 幂等性检查降级方案（Redis失败时使用数据库）
+     * 
      * @param idempotencyKey 幂等性键
      * @return 已存在的订单或null
      */
@@ -174,27 +197,39 @@ public class OrderService {
 
     /**
      * 发送订单创建事件到Kafka
+     * 
      * @param order 订单对象
      */
     private void sendOrderCreatedEvent(Order order) {
         try {
             // 构建消息内容
             OrderEvent orderEvent = new OrderEvent(
-                order.getOrderId(),
-                order.getProductId(),
-                order.getQuantity(),
-                order.getStatus().toString(),
-                order.getCreatedAt()
-            );
+                    order.getOrderId(),
+                    order.getProductId(),
+                    order.getQuantity(),
+                    order.getStatus().toString(),
+                    order.getCreatedAt());
 
-            // 发送到Kafka主题
-            kafkaTemplate.send(ORDER_TOPIC, order.getOrderId(), orderEvent);
+            // 添加ObjectMapper来手动序列化为JSON字符串
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+            objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+
+            String messageJson = objectMapper.writeValueAsString(orderEvent);
+
+            System.out.println("=== 准备发送Kafka消息 ===");
+            System.out.println("消息内容: " + messageJson);
+
+            // 发送JSON字符串到Kafka主题
+            kafkaTemplate.send(ORDER_TOPIC, order.getOrderId(), messageJson);
+
+            System.out.println("=== 订单事件发送成功 ===");
             logger.info("订单事件发送成功: orderId={}, topic={}", order.getOrderId(), ORDER_TOPIC);
-            
+
         } catch (Exception e) {
+            System.err.println("=== 发送订单事件失败 ===");
             logger.error("发送订单事件失败: orderId={}", order.getOrderId(), e);
-            // 消息发送失败不影响主流程，但要记录日志
-            // 实际项目中可能需要重试机制或补偿措施
+            e.printStackTrace();
         }
     }
 
@@ -202,6 +237,7 @@ public class OrderService {
 
     /**
      * 根据订单ID查找订单
+     * 
      * @param orderId 订单ID
      * @return 订单对象
      */
@@ -211,6 +247,7 @@ public class OrderService {
 
     /**
      * 根据状态查找订单
+     * 
      * @param status 订单状态
      * @return 订单列表
      */
@@ -220,6 +257,7 @@ public class OrderService {
 
     /**
      * 查找所有订单
+     * 
      * @return 所有订单列表
      */
     public List<Order> findAllOrders() {
@@ -228,7 +266,8 @@ public class OrderService {
 
     /**
      * 更新订单状态
-     * @param orderId 订单ID
+     * 
+     * @param orderId   订单ID
      * @param newStatus 新状态
      * @return 更新后的订单
      */
@@ -238,10 +277,10 @@ public class OrderService {
             Order order = orderOpt.get();
             order.setStatus(newStatus);
             Order updatedOrder = orderRepository.save(order);
-            
-            logger.info("订单状态更新: orderId={}, oldStatus={}, newStatus={}", 
-                       orderId, order.getStatus(), newStatus);
-            
+
+            logger.info("订单状态更新: orderId={}, oldStatus={}, newStatus={}",
+                    orderId, order.getStatus(), newStatus);
+
             return updatedOrder;
         } else {
             throw new RuntimeException("订单不存在: " + orderId);
@@ -252,6 +291,7 @@ public class OrderService {
 
     /**
      * 获取订单统计信息（用于一致性评估）
+     * 
      * @return 各状态的订单数量
      */
     public List<Object[]> getOrderStatistics() {
@@ -260,6 +300,7 @@ public class OrderService {
 
     /**
      * 查找处理延迟的订单（用于一致性评估）
+     * 
      * @param delayMinutes 延迟分钟数
      * @return 延迟处理的订单列表
      */
@@ -272,8 +313,9 @@ public class OrderService {
 
     /**
      * 验证订单请求参数
+     * 
      * @param productId 商品ID
-     * @param quantity 数量
+     * @param quantity  数量
      */
     private void validateOrderRequest(Long productId, Integer quantity) {
         if (productId == null || productId <= 0) {
@@ -289,6 +331,7 @@ public class OrderService {
 
     /**
      * 生成唯一订单ID
+     * 
      * @return 订单ID
      */
     private String generateOrderId() {
@@ -310,8 +353,8 @@ public class OrderService {
         private String status;
         private LocalDateTime createdAt;
 
-        public OrderEvent(String orderId, Long productId, Integer quantity, 
-                         String status, LocalDateTime createdAt) {
+        public OrderEvent(String orderId, Long productId, Integer quantity,
+                String status, LocalDateTime createdAt) {
             this.orderId = orderId;
             this.productId = productId;
             this.quantity = quantity;
@@ -320,19 +363,44 @@ public class OrderService {
         }
 
         // Getter和Setter方法
-        public String getOrderId() { return orderId; }
-        public void setOrderId(String orderId) { this.orderId = orderId; }
-        
-        public Long getProductId() { return productId; }
-        public void setProductId(Long productId) { this.productId = productId; }
-        
-        public Integer getQuantity() { return quantity; }
-        public void setQuantity(Integer quantity) { this.quantity = quantity; }
-        
-        public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
-        
-        public LocalDateTime getCreatedAt() { return createdAt; }
-        public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+        public String getOrderId() {
+            return orderId;
+        }
+
+        public void setOrderId(String orderId) {
+            this.orderId = orderId;
+        }
+
+        public Long getProductId() {
+            return productId;
+        }
+
+        public void setProductId(Long productId) {
+            this.productId = productId;
+        }
+
+        public Integer getQuantity() {
+            return quantity;
+        }
+
+        public void setQuantity(Integer quantity) {
+            this.quantity = quantity;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
+        }
+
+        public LocalDateTime getCreatedAt() {
+            return createdAt;
+        }
+
+        public void setCreatedAt(LocalDateTime createdAt) {
+            this.createdAt = createdAt;
+        }
     }
 }
