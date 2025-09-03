@@ -1,0 +1,13 @@
+# Redis Configuration Snapshot for balanced
+Timestamp: 2025-08-09T16:50:40+01:00
+Configuration Type: balanced
+
+appendonly: yes
+appendfsync: everysec
+maxmemory: 2147483648
+maxmemory-policy: allkeys-lru
+save: 900 1 300 10 60 10000
+rdbcompression: yes
+no-appendfsync-on-rewrite: yes
+auto-aof-rewrite-percentage: 100
+auto-aof-rewrite-min-size: 67108864

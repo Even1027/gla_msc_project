@@ -1,0 +1,7 @@
+Config=strong
+Profile=medium
+Fault=container-restart
+InjectAtSeconds=10
+DurationSeconds=60
+TargetRPM=600
+Concurrency=5

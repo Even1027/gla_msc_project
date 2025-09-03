@@ -1,0 +1,10 @@
+Config=performance
+Profile=high
+FaultType=cpu-contention
+InjectAtSeconds=10
+DurationSeconds=60
+TargetRPM=1200
+ConcurrentUsers=8
+StressDurationSeconds=15
+StressProcesses=2
+ExecutedAt=2025-08-10T13:11:03+01:00

@@ -1,0 +1,13 @@
+# Redis Configuration Snapshot for performance
+Timestamp: 2025-08-09T16:57:25+01:00
+Configuration Type: performance
+
+appendonly: yes
+appendfsync: no
+maxmemory: 2147483648
+maxmemory-policy: volatile-lru
+save: 
+rdbcompression: no
+no-appendfsync-on-rewrite: yes
+auto-aof-rewrite-percentage: 200
+auto-aof-rewrite-min-size: 134217728

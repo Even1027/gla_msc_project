@@ -1,0 +1,37 @@
+# CPU Contention Fault Injection Experiment
+
+ExperimentID=cpu_contention_20250810_125706
+StartTime=2025-08-10T11:57:06+00:00
+EndTime=2025-08-10T13:11:19+01:00
+TotalDurationSeconds=853
+
+# Fault Configuration
+FaultType=cpu-contention
+InjectionTimeSeconds=10
+StressDurationSeconds=15
+StressProcesses=2
+BaseURL=http://localhost:8080/api/orders
+
+# Load Profiles
+LowLoad=40s,180rpm,3users
+MediumLoad=50s,600rpm,5users
+HighLoad=60s,1200rpm,8users
+
+# Test Matrix
+ConfigsTested=strong,balanced,performance
+ProfilesTested=low,medium,high
+TotalCases=9
+
+# Academic Background
+FaultCategory=resource-contention
+RedisArchitecture=single-threaded
+ExpectedImpact=appendfsync_performance_degradation
+
+# System Info
+WindowsDockerCompatible=true
+GitBashCompatible=true
+ImplementationComplexity=minimal
+
+# Results
+ConsolidatedResults=consolidated_results.csv
+Status=COMPLETED

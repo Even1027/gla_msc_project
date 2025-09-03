@@ -1,0 +1,13 @@
+# Redis Configuration Snapshot for strong
+Timestamp: 2025-08-09T16:43:22+01:00
+Configuration Type: strong
+
+appendonly: yes
+appendfsync: always
+maxmemory: 2147483648
+maxmemory-policy: noeviction
+save: 60 1
+rdbcompression: yes
+no-appendfsync-on-rewrite: no
+auto-aof-rewrite-percentage: 100
+auto-aof-rewrite-min-size: 67108864
