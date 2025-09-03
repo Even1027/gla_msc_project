@@ -42,7 +42,7 @@ This project evaluates and compares two consistency mechanisms in a microservice
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/YourUsername/kafka-microservices-consistency.git
+git clone https://github.com/Even1027/gla_msc_project.git
 cd kafka-microservices-consistency
 ```
 
@@ -132,21 +132,9 @@ mvn test
 ## Contributing
 
 This is an academic research project. For questions or suggestions:
-- Email: [your.email@university.edu]
-- Supervisor: [supervisor.email@university.edu]
+- Email: [2986450z@student.gla.ac.uk]
+- Supervisor: [Phil.Trinder@glasgow.ac.uk]
 
-## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Academic Context
-
-**Institution**: [Your University Name]  
-**Program**: MSc Computer Science  
-**Course**: [Course Name]  
-**Supervisor**: [Supervisor Name]  
-**Academic Year**: 2024-2025
-
----
 
 *This project demonstrates practical implementation of consistency mechanisms in distributed systems, contributing to the understanding of microservices reliability patterns.*

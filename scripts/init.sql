@@ -1,80 +1,80 @@
--- Kafka微服务一致性研究项目 - 数据库初始化脚本
--- 创建时间: 2025-07-28
--- 说明: 订单服务和库存服务的完整数据库表结构
+-- Kafka Microservices Consistency Research Project - Database Initialisation Scripts
+-- Created: 2025-07-28
+-- Description: Complete database table structure for Order Service and Inventory Service
 
--- 创建数据库（如果不存在）
+-- Create database (if it doesn't exist)）
 CREATE DATABASE IF NOT EXISTS microservices_db;
 USE microservices_db;
 
--- ==================== 订单表 ====================
+-- ==================== order form ====================
 CREATE TABLE orders (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    order_id VARCHAR(50) UNIQUE NOT NULL COMMENT '订单唯一标识',
-    product_id BIGINT NOT NULL COMMENT '商品ID',
-    quantity INT NOT NULL COMMENT '订单数量',
-    status VARCHAR(20) DEFAULT 'PENDING' COMMENT '订单状态: PENDING, CONFIRMED, CANCELLED',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    order_id VARCHAR(50) UNIQUE NOT NULL COMMENT 'Order Unique Identifier',
+    product_id BIGINT NOT NULL COMMENT 'Product ID',
+    quantity INT NOT NULL COMMENT 'Number of orders',
+    status VARCHAR(20) DEFAULT 'PENDING' COMMENT 'Order Status: PENDING, CONFIRMED, CANCELLED',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Create time',
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
     
     INDEX idx_order_id (order_id),
     INDEX idx_product_id (product_id),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='order form';
 
--- ==================== 库存表 ====================
+-- ==================== inventory list ====================
 CREATE TABLE inventory (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    product_id BIGINT UNIQUE NOT NULL COMMENT '商品ID，必须唯一',
-    quantity INT NOT NULL COMMENT '总库存数量',
-    reserved_quantity INT NOT NULL DEFAULT 0 COMMENT '预留数量（已下单但未确认）',
-    version BIGINT NOT NULL DEFAULT 0 COMMENT '乐观锁版本号，防止并发修改',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    product_id BIGINT UNIQUE NOT NULL COMMENT 'Product ID, must be unique',
+    quantity INT NOT NULL COMMENT 'Total number of stocks',
+    reserved_quantity INT NOT NULL DEFAULT 0 COMMENT 'Quantity reserved (ordered but not confirmed)',
+    version BIGINT NOT NULL DEFAULT 0 COMMENT 'Optimistic locking of version numbers to prevent concurrent modifications',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Create time',
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
     
     INDEX idx_product_id (product_id),
     INDEX idx_version (version)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='inventory list';
 
--- ==================== 一致性日志表 ====================
+-- ==================== Consistency log table ====================
 CREATE TABLE consistency_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    event_type VARCHAR(50) NOT NULL COMMENT '事件类型: ORDER_CREATED, INVENTORY_RESERVED, INVENTORY_CONFIRMED等',
-    order_id VARCHAR(50) COMMENT '关联的订单ID',
-    product_id BIGINT COMMENT '关联的商品ID',
-    quantity INT COMMENT '数量变化',
-    old_value INT COMMENT '变更前的值',
-    new_value INT COMMENT '变更后的值',
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '事件时间戳',
-    details TEXT COMMENT '详细信息（JSON格式）',
+    event_type VARCHAR(50) NOT NULL COMMENT 'Event Type: ORDER_CREATED, INVENTORY_RESERVED, INVENTORY_CONFIRMED等',
+    order_id VARCHAR(50) COMMENT 'Related Orders ID',
+    product_id BIGINT COMMENT 'Associated Commodities ID',
+    quantity INT COMMENT 'Quantitative changes',
+    old_value INT COMMENT 'Value before change',
+    new_value INT COMMENT 'Changed value',
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'event timestamp',
+    details TEXT COMMENT 'Details (JSON format)',
     
     INDEX idx_event_type (event_type),
     INDEX idx_order_id (order_id),
     INDEX idx_product_id (product_id),
     INDEX idx_timestamp (timestamp)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='一致性事件日志表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Consistency event log table';
 
--- ==================== 初始数据插入 ====================
+-- ==================== Initial data insertion ====================
 
--- 插入测试商品库存数据
+-- Insert test item inventory data
 INSERT INTO inventory (product_id, quantity, reserved_quantity, version) VALUES 
-(1, 100, 0, 0),  -- 商品1: 100个库存
-(2, 50, 0, 0),   -- 商品2: 50个库存  
-(3, 200, 0, 0);  -- 商品3: 200个库存
+(1, 100, 0, 0),  -- Product 1: 100 in stock
+(2, 50, 0, 0),   -- Product 2: 50 in stock  
+(3, 200, 0, 0);  -- Product 3.: 200 in stock
 
--- 插入一条初始化日志
+-- Insert an initialisation log
 INSERT INTO consistency_log (event_type, details) VALUES 
-('SYSTEM_INIT', '{"message": "数据库初始化完成", "timestamp": "2025-07-28", "inventory_count": 3}');
+('SYSTEM_INIT', '{"message": "Database initialisation complete", "timestamp": "2025-07-28", "inventory_count": 3}');
 
--- ==================== 查看创建结果 ====================
+-- ==================== View creation results ====================
 
--- 显示表结构
+-- Show Table Structure
 SHOW TABLES;
 
--- 显示库存表结构
+-- Show inventory table structure
 DESCRIBE inventory;
 
--- 显示初始数据
+-- Display initial data
 SELECT 
     product_id,
     quantity,
@@ -84,7 +84,7 @@ SELECT
     created_at
 FROM inventory;
 
--- 显示表统计信息
+-- Displaying Table Statistics
 SELECT 
     'orders' as table_name, 
     COUNT(*) as record_count 

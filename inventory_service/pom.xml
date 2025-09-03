@@ -5,13 +5,13 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     
-    <!-- 项目基本信息 -->
+    <!-- Basic Project Information -->
     <groupId>com.example</groupId>
     <artifactId>inventory-service</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
     
-    <!-- Spring Boot父项目 -->
+    <!-- Spring Boot parent project -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -19,14 +19,14 @@
         <relativePath/>
     </parent>
     
-    <!-- 项目属性 -->
+    <!-- Project Properties -->
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     
-    <!-- 依赖配置 -->
+    <!-- Dependent Configuration -->
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -37,63 +37,63 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <!-- 作用: 提供REST API能力和内嵌Web服务器 -->
+            <!-- Role: Provide REST API capability and embedded web server -->
         </dependency>
         
         <!-- Spring Boot Data JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
-            <!-- 作用: 数据库操作，管理库存数据 -->
+            <!-- Role: Database operations, managing inventory data -->
         </dependency>
         
-        <!-- MySQL驱动 -->
+        <!-- MySQL Driver -->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
-            <!-- 作用: 连接MySQL数据库，与订单服务共享同一数据库 -->
+            <!-- Function: Connects to a MySQL database and shares the same database with the Order Service. -->
         </dependency>
         
         <!-- Spring Kafka -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
-            <!-- 作用: Kafka消费者，接收订单事件消息 -->
+            <!-- Role: Kafka consumer, receives order event messages. -->
         </dependency>
         
-        <!-- JSON处理 -->
+        <!-- JSON processing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <!-- 作用: 反序列化Kafka消息中的JSON数据 -->
+            <!-- Function: Deserialises JSON data in Kafka messages. -->
         </dependency>
         
-        <!-- 测试依赖 -->
+        <!-- Testing dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-            <!-- 作用: 单元测试和集成测试 -->
+            <!-- Role: Unit and Integration Testing -->
         </dependency>
         
-        <!-- Kafka测试支持 -->
+        <!-- Kafka Test Support -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka-test</artifactId>
             <scope>test</scope>
-            <!-- 作用: Kafka消费者测试 -->
+            <!-- Role: Kafka Consumer Testing -->
         </dependency>
     </dependencies>
     
-    <!-- 构建配置 -->
+    <!-- Build Configuration -->
     <build>
         <plugins>
-            <!-- Spring Boot Maven插件 -->
+            <!-- Spring Boot Maven plugins -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <!-- 作用: 打包可执行jar文件 -->
+                <!-- Function: Package executable jar files -->
             </plugin>
         </plugins>
     </build>
