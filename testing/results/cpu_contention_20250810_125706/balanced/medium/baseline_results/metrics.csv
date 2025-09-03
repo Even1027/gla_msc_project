@@ -1,0 +1,16 @@
+metric,value
+total_requests,208
+success,208
+failed,0
+error_rate_percent,0.00
+p50_ms,17
+p95_ms,22
+p99_ms,37
+throughput_rps,4.16
+timeout_count,0
+http_4xx_count,0
+http_5xx_count,0
+idempotency_total_keys,145
+idempotency_repeated_requests,63
+idempotency_cache_hits,63
+idempotency_hit_rate_percent,100.00

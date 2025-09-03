@@ -1,0 +1,10 @@
+# Academic Baseline Test Configuration
+Test Start: 2025-08-10T01:42:28+01:00
+Duration: 60 seconds
+Target Rate: 600 requests/minute
+Concurrent Users: 5
+Per-Worker Rate: 120 requests/minute
+Request Delay: 0.500 seconds
+Base URL: http://localhost:8080/api/orders
+Timeout Settings: connect=2s, total=5s
+System: MinGW/Windows Compatible Mode

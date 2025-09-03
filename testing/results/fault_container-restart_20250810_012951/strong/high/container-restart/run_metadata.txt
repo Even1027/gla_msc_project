@@ -1,0 +1,7 @@
+Config=strong
+Profile=high
+Fault=container-restart
+InjectAtSeconds=10
+DurationSeconds=90
+TargetRPM=1200
+Concurrency=8

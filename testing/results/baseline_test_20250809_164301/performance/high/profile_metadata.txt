@@ -1,0 +1,6 @@
+Configuration: performance
+Profile: high
+Duration: 120s
+Target Rate: 1200 req/min
+Concurrency: 8
+Execution Time: 2025-08-09T17:03:45+01:00

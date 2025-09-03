@@ -1,0 +1,10 @@
+config,profile,fault_type,total_requests,success,failed,error_rate_percent,throughput_rps,p50_ms,p95_ms,p99_ms,idempotency_hit_rate_percent,timeout_count,http_4xx_count,http_5xx_count,stress_duration_s,recovery_time_s,redis_responsive_during_stress,write_test_success,write_latency_ms
+strong,low,cpu-contention,78,78,0,0.00,1.95,22,36,78,100.00,0,0,0,20,2,true,true,389
+strong,medium,cpu-contention,212,212,0,0.00,4.24,23,34,38,100.00,0,0,0,20,3,true,true,394
+strong,high,cpu-contention,397,397,0,0.00,6.61,22,30,35,100.00,0,0,0,21,3,true,true,614
+balanced,low,cpu-contention,69,69,0,0.00,1.72,17,24,29,100.00,0,0,0,21,3,true,true,672
+balanced,medium,cpu-contention,208,208,0,0.00,4.16,17,22,37,100.00,0,0,0,21,2,true,true,462
+balanced,high,cpu-contention,353,353,0,0.00,5.88,20,38,51,100.00,0,0,0,21,3,true,true,587
+performance,low,cpu-contention,78,78,0,0.00,1.95,14,26,30,100.00,0,0,0,20,2,true,true,480
+performance,medium,cpu-contention,204,204,0,0.00,4.08,16,22,33,100.00,0,0,0,20,3,true,true,520
+performance,high,cpu-contention,391,391,0,0.00,6.51,19,27,40,100.00,0,0,0,20,3,true,true,538

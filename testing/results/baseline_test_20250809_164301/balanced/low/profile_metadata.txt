@@ -1,0 +1,6 @@
+Configuration: balanced
+Profile: low
+Duration: 60s
+Target Rate: 180 req/min
+Concurrency: 3
+Execution Time: 2025-08-09T16:52:18+01:00

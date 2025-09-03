@@ -1,0 +1,10 @@
+Config=balanced
+Profile=low
+FaultType=cpu-contention
+InjectAtSeconds=10
+DurationSeconds=40
+TargetRPM=180
+ConcurrentUsers=3
+StressDurationSeconds=15
+StressProcesses=2
+ExecutedAt=2025-08-10T13:03:00+01:00

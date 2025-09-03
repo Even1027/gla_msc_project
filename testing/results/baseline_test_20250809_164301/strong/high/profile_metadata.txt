@@ -1,0 +1,6 @@
+Configuration: strong
+Profile: high
+Duration: 120s
+Target Rate: 1200 req/min
+Concurrency: 8
+Execution Time: 2025-08-09T16:49:28+01:00

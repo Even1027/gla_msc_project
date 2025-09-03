@@ -1,4 +1,0 @@
-load_level,requests_per_minute,total_requests,successful_requests,throughput_req_per_sec,avg_response_time_ms,p95_latency_ms,error_rate_percent
-MEDIUM,600,91,91,1.52,14.20,95,0.00
-HIGH,1200,90,90,1.50,14.24,95,0.00
-EXTREME,1800,90,90,1.50,13.63,95,0.00

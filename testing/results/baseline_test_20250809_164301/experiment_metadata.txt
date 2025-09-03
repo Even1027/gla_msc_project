@@ -1,0 +1,25 @@
+# Redis Consistency Research Experiment Metadata
+Experiment ID: validation_20250809_164301
+Start Time: 2025-08-09T16:43:02+01:00
+Base URL: http://localhost:8080/api/orders
+Redis Container: redis
+
+# System Information
+Docker Version: Docker version 28.3.0, build 38b7060
+Host OS: MINGW64_NT-10.0-22631 zhou 3.6.3-7674c51e.x86_64 2025-07-01 09:13 UTC x86_64 Msys
+Git Commit: 33c7c78
+
+# Load Profile Configuration
+Low Load: 60s, 180 req/min, 3 concurrent
+Medium Load: 90s, 600 req/min, 5 concurrent
+High Load: 120s, 1200 req/min, 8 concurrent
+
+# Timing Configuration
+Pause Between Configs: 10s
+Pause Between Profiles: 5s
+Warmup Requests: 5
+
+# Experiment Completion
+End Time: 2025-08-09T17:04:02+01:00
+Total Duration: 1260 seconds
+Status: COMPLETED SUCCESSFULLY
